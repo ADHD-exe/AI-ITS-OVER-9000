@@ -183,3 +183,63 @@ This file is the authoritative source for:
 | Links | BUG-XXX, UP-XXX |
 | Notes | Decisions or important context only |
 ```
+
+---
+
+## 5. Append-Only Updates
+
+### 2026-04-22 — State Update (v1.0.4)
+
+- The shipped userscript version is now **v1.0.4**.
+- The self-update target now points at this repository's actual raw userscript file.
+- `New Chat` now stays on the current platform origin so pending prompts survive on `chat.openai.com` and Claude users are not redirected to ChatGPT.
+- ChatGPT-only chat export and bulk export/delete flows now fail clearly on unsupported platforms instead of exposing silent/broken behavior.
+- API key rotation now starts with the first configured key and advances in order.
+- Inline autocomplete now binds its document click listener once, avoiding listener buildup across SPA rerenders.
+- The panel home actions and GM menu now expose separate bulk export and bulk delete entries.
+
+### 2026-04-22 — Bug Status Addendum
+
+#### BUG-001 — Bulk Export/Delete Missing Delete Action
+
+| Field | Value |
+|------|------|
+| ID | BUG-001 |
+| Status | Fixed |
+| Symptom | Delete action missing or misleadingly exposed from bulk chat controls |
+| Area | Bulk export/delete UI and GM menu |
+| Suspected Cause | Export and delete entry points were collapsed into an export-only launch path |
+| Workaround | Open delete flow from the prompt menu only |
+| Solution | Added explicit bulk export and bulk delete entry points in the panel home actions and GM menu |
+
+### 2026-04-22 — Completed Changes
+
+- **File:** `AI-ITS-OVER-9000.user.js`
+  **Areas:** metadata header, update checker, new chat handoff, export gating, bulk modal gating, AI provider selection, inline autocomplete setup, panel home actions, GM menu commands
+  **What changed:** Corrected the raw update/download target, bumped version to `1.0.4`, preserved same-origin pending prompts during new chat navigation, guarded ChatGPT-only actions on unsupported platforms, fixed API key rotation ordering, prevented duplicate global click listeners, and split bulk export/delete actions.
+  **Why:** These were the highest-confidence functional issues from the repo review and caused broken updates, cross-origin prompt loss, misleading platform behavior, and event-listener accumulation.
+  **How verified:** `node --check AI-ITS-OVER-9000.user.js`
+
+- **File:** `README.md`
+  **Areas:** architecture, installation, development workflow
+  **What changed:** Replaced the stale modular `src/` description with the current single-file repo shape and added direct installation guidance.
+  **Why:** The repository docs no longer matched the actual contents of the repo.
+  **How verified:** Manual file review after patching.
+
+- **File:** `logs/LOG-001.md`
+  **Areas:** project audit trail
+  **What changed:** Added a task log for the review-driven fixes.
+  **Why:** Required by the repository logging rules.
+  **How verified:** Manual file review after creation.
+
+### 2026-04-22 — Next Steps
+
+- Manually smoke-test `New Chat` on `chatgpt.com`, `chat.openai.com`, and `claude.ai`.
+- Manually verify chat export and bulk delete on current ChatGPT DOM.
+- Replace remaining `document.execCommand(...)` editor paths when a lower-risk platform-safe alternative is chosen.
+
+### 2026-04-22 — Logs Table Addendum
+
+| Date/Time | LOG-ID | Task / Phase | Status | File | Links (BUG / UP) |
+|----------|--------|--------------|--------|------|------------------|
+| 2026-04-22 16:07 | LOG-001 | Review fixes and repo sync | Completed | logs/LOG-001.md | BUG-001 |

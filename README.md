@@ -243,22 +243,22 @@ Configurable shortcuts for:
 
 ## Architecture
 
-This project uses a **modular architecture compiled into a single userscript**.
-
-### High-Level Structure
+The repository currently ships a **single-file userscript**:
 
 ```
-src/
-├── platform/        # ChatGPT + future adapters
-├── prompts/         # Prompt engine + placeholders
-├── theming/         # CSS system + presets
-├── ai/              # API + enhancement logic
-├── nav/             # Message navigation + pins
-├── chat-management/ # Export + delete
-├── ui/              # Panels, modals, toolbar
-├── utils/           # Shared utilities
-└── main.js          # Entry point
+AI-ITS-OVER-9000.user.js
 ```
+
+The code is still organized internally by section:
+
+* Platform adapters
+* Prompt engine + placeholders
+* Theming
+* AI enhancement
+* Chat management
+* Navigation + pins
+* UI panels / modals / toolbar
+* Shared utilities
 
 ---
 
@@ -304,23 +304,26 @@ Avoids full CSS reparse on updates.
 
 ---
 
-## Installation (Planned)
+## Installation
 
-1. Install Tampermonkey or equivalent
-2. Add the built userscript file
-3. Open ChatGPT
-4. Script initializes automatically
+1. Install Tampermonkey or a compatible userscript manager
+2. Open `AI-ITS-OVER-9000.user.js`
+3. Install the script in your userscript manager
+4. Open `chatgpt.com`, `chat.openai.com`, `claude.ai`, or `gist.github.com`
+5. The script initializes automatically on supported pages
 
 ---
 
 ## Development Workflow
 
-### Build System
+### Current Repo Shape
 
-Recommended:
+* No build pipeline is checked into this repository today
+* The committed source of execution is the shipped single-file userscript
 
-* `esbuild` or `rollup`
-* Output: single IIFE userscript
+### Future Build Option
+
+If the project is split back into source modules later, a bundler such as `esbuild` or `rollup` would be a natural fit for producing the final single IIFE userscript.
 
 ### Principles
 
@@ -382,4 +385,3 @@ Unleashed Prompt is designed to be:
 > The most feature-rich ChatGPT userscript possible without sacrificing control, extensibility, or technical integrity.
 
 ---
-

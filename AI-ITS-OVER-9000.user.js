@@ -1,12 +1,12 @@
 // ==UserScript==
-// IMPORTANT DEVELOPMENT RULE:
-// REVIEW SOURCE OF TRUTH PROJECT_LOGS.md BEFORE MAKING ANY CHANGES,
 // EDITS, REVISIONS, UPGRADES, OR FIXES OF ANY KIND.
 // @name         Unleashed Prompt
 // @namespace    https://github.com/unleashed-prompt
-// @version      1.0.3
+// @version      1.0.4
 // @description  ChatGPT-first hybrid: full visual theming, advanced prompt library, AI enhance with diff, bulk chat management, placeholder system, inline suggest, nav widget, gist integration, and more.
 // @author       Unleashed Prompt Contributors
+// @downloadURL  https://raw.githubusercontent.com/ADHD-exe/AI-ITS-OVER-9000/main/AI-ITS-OVER-9000.user.js
+// @updateURL    https://raw.githubusercontent.com/ADHD-exe/AI-ITS-OVER-9000/main/AI-ITS-OVER-9000.user.js
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
 // @match        https://claude.ai/*
@@ -26,16 +26,27 @@
 // @connect      raw.githubusercontent.com
 // @connect      api.github.com
 // @connect      gist.github.com
+// @// IMPORTANT DEVELOPMENT RULE:
+// REVIEW SOURCE OF TRUTH PROJECT_LOGS.md BEFORE MAKING ANY CHANGES,
+
 // ==/UserScript==
 
 /**
  * ============================================================
- *  UNLEASHED PROMPT v1.0.2
+ *  UNLEASHED PROMPT v1.0.4
  *  Hybrid of GPT-Unleashed v2.8.26 (Script A) + My Prompt v6.0.8 (Script B)
  *  Architecture: Single structured IIFE
  *  Platform: ChatGPT-first, Claude.ai secondary
  *  Storage: GM_getValue / GM_setValue + IndexedDB for pins
  * ============================================================
+ *
+ *  CHANGELOG v1.0.4:
+ *   - FIX: Update checker/download URL now points at this repository's shipped userscript
+ *   - FIX: New Chat keeps same-origin navigation so pending prompts survive on chat.openai.com
+ *          and Claude users are no longer redirected to ChatGPT
+ *   - FIX: ChatGPT-only export/delete actions now fail clearly on unsupported platforms
+ *   - FIX: API key rotation now starts with the first configured key
+ *   - FIX: Inline autocomplete no longer stacks global document click listeners on SPA rerenders
  *
  *  CHANGELOG v1.0.3:
  *   - BUG-001: exportChatByHref replaced iframe (CSP-blocked) with fetch+DOMParser
@@ -79,8 +90,8 @@
   // §2 · CONSTANTS & STORAGE KEYS
   // ============================================================
   const SCRIPT_NAME    = 'Unleashed Prompt';
-  const SCRIPT_VERSION = '1.0.3';
-  const UPDATE_URL     = 'https://raw.githubusercontent.com/unleashed-prompt/unleashed-prompt/main/unleashed-prompt.user.js';
+  const SCRIPT_VERSION = '1.0.4';
+  const UPDATE_URL     = 'https://raw.githubusercontent.com/ADHD-exe/AI-ITS-OVER-9000/main/AI-ITS-OVER-9000.user.js';
 
   const KEYS = {
     SETTINGS:         'up_settings_v1',
@@ -129,6 +140,7 @@
     isInitialized: false, isInitializing: false,
     currentPlatform: null,
     floatingPromptEventsBound: false,
+    inlineDocClickBound: false,
     composerEl: null, pillButton: null, promptMenu: null,
   };
 
@@ -968,8 +980,8 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     const keyStr = AIState.config[`${providerName}Key`] || '';
     const keys = keyStr.split(',').map(k => k.trim()).filter(Boolean);
     if (!keys.length) return null;
-    const idx = ((AIState.config[`${providerName}KeyIdx`] || 0) + 1) % keys.length;
-    AIState.config[`${providerName}KeyIdx`] = idx;
+    const idx = (AIState.config[`${providerName}KeyIdx`] || 0) % keys.length;
+    AIState.config[`${providerName}KeyIdx`] = (idx + 1) % keys.length;
     return { provider, model, key: keys[idx] };
   }
 
@@ -1066,10 +1078,14 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
   let _inlineMenu = null;
 
   function setupInlineSuggestion(composer) {
-    if (!composer) return;
+    if (!composer || composer.__upInlineSuggestion) return;
+    composer.__upInlineSuggestion = true;
     composer.addEventListener('input', makeDebounce(() => handleInlineInput(composer), DEBOUNCE_INLINE));
     composer.addEventListener('keydown', handleInlineKeydown);
-    document.addEventListener('click', closeInlineMenu);
+    if (!UIState.inlineDocClickBound) {
+      document.addEventListener('click', closeInlineMenu);
+      UIState.inlineDocClickBound = true;
+    }
   }
 
   function getTextBeforeCaret(el) {
@@ -1312,6 +1328,10 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
   }
 
   function exportCurrentChatAsMarkdown() {
+    if (UIState.currentPlatform !== 'chatgpt') {
+      showNotification('Current chat export is currently supported on ChatGPT only.', 'error');
+      return;
+    }
     const md = extractChatMarkdownFromDocument();
     if (!md) { showNotification('No messages found.', 'error'); return; }
     downloadTextFile(`chat-${Date.now()}.md`, md, 'text/markdown');
@@ -1359,6 +1379,10 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
   }
 
   function openBulkChatModal(mode = 'export') {
+    if (UIState.currentPlatform !== 'chatgpt') {
+      showNotification('Bulk chat export/delete is currently supported on ChatGPT only.', 'error');
+      return;
+    }
     const items = getSidebarChatItems();
     if (!items.length) { showNotification('No sidebar chats found.', 'error'); return; }
     const overlay = el('div', { cls: 'up-modal-overlay', attrs: { role: 'dialog', 'aria-modal': 'true' } });
@@ -1500,7 +1524,8 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 
   function startNewChatWithPrompt(text) {
     setPendingPrompt(text);
-    location.href = 'https://chatgpt.com/';
+    const targetOrigin = UIState.currentPlatform === 'claude' ? 'https://claude.ai' : location.origin;
+    location.href = `${targetOrigin}/`;
   }
 
   // ============================================================
@@ -2209,7 +2234,8 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     c.appendChild(el('div', { text: `⚡ ${SCRIPT_NAME} v${SCRIPT_VERSION}`, attrs: { style: 'font-weight:700;margin-bottom:10px' } }));
     [
       { text: '📥 Export Current Chat',   fn: exportCurrentChatAsMarkdown },
-      { text: '📦 Bulk Export/Delete',    fn: () => openBulkChatModal('export') },
+      { text: '📥 Bulk Export Chats',     fn: () => openBulkChatModal('export') },
+      { text: '🗑 Bulk Delete Chats',     fn: () => openBulkChatModal('delete') },
       { text: '💾 Backup & Restore…',     fn: openBackupModal },
       { text: '🐙 Gist Import/Export…',   fn: openGistModal },
       { text: '🆕 New Chat',              fn: () => startNewChatWithPrompt('') },
@@ -2921,7 +2947,8 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     GM_registerMenuCommand('📚 Open Prompt Library', () => { if (UIState.pillButton) { const btn = UIState.pillButton.querySelector('.up-prompts-btn'); if (btn) togglePromptMenu(btn); } });
     GM_registerMenuCommand('🎨 Open Settings / Themes', () => togglePanel(true));
     GM_registerMenuCommand('📥 Export Current Chat', exportCurrentChatAsMarkdown);
-    GM_registerMenuCommand('📦 Bulk Export/Delete Chats', () => openBulkChatModal('export'));
+    GM_registerMenuCommand('📥 Bulk Export Chats', () => openBulkChatModal('export'));
+    GM_registerMenuCommand('🗑 Bulk Delete Chats', () => openBulkChatModal('delete'));
     GM_registerMenuCommand('🔄 Check for Updates', () => checkForUserscriptUpdate(false));
     GM_registerMenuCommand('🐛 Toggle Debug Mode', () => { DEBUG = !DEBUG; showNotification(`Debug mode ${DEBUG ? 'enabled' : 'disabled'}`); });
     GM_registerMenuCommand('ℹ️ About', () => {
