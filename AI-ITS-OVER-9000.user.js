@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Unleashed Prompt
 // @namespace    https://github.com/unleashed-prompt
-// @version      1.0.1
+// @version      1.0.2
 // @description  ChatGPT-first hybrid: full visual theming, advanced prompt library, AI enhance with diff, bulk chat management, placeholder system, inline suggest, and more.
 // @author       Unleashed Prompt Contributors
 // @match        https://chatgpt.com/*
