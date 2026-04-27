@@ -383,7 +383,3 @@ Unleashed Prompt is designed to be:
 
 ---
 
-If you want, next step I can:
-
-* Generate the **actual repo file structure + starter scaffold**
-* Or produce the **full Phase 1 implementation plan with checkpoints (your preferred workflow)**
