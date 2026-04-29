@@ -5,7 +5,7 @@ You must maintain a persistent log file:
 
 ```
 
-project_logs.md
+PROJECT_LOGS.md
 
 ````
 
@@ -70,9 +70,24 @@ For each change, record:
 ---
 
 ### 5. Upgrade Ideas / Deferred Work
+*Agent should Share upgrade ideas and ask to add them to this list, Never create add or implement Upgrade ideas without approval*
 
-- Future improvements
-- Enhancements not in current scope
+- Functionality 
+- Reliability   
+- Stability
+- Performance  
+- Efficiency
+- Code Quality  
+- Structure
+- Readability  
+- Documentation 
+- Compatibility
+- Security
+- User Experience
+- Configuration
+- Customization
+- Compliance with Project Constraints
+- Deployment
 
 ---
 
