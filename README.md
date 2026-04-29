@@ -1,4 +1,4 @@
-# AI-OVER-9000-
+# AI-ITS-OVER-9000
 A maximum-feature ChatGPT/Claude.ai userscript for automated prompt enhancement with AI, chat navigation, templates, tagging, and quick insert tools. Combines a full UI theming engine with deep interface controls into a single, unified platform.
 
 ---
