@@ -145,3 +145,35 @@ Hovering any of the 7 nav buttons at the top of the floating panel now shows a s
 - `AI-ITS-OVER-9000.user.js` version updated to 1.0.2  
 
 ---
+
+## 2. Known Issues / Bugs (Graph View)
+
+### BUG GRAPH OVERVIEW
+
+BUG-001 → Bulk Export/Delete UI Missing Delete Action  
+└── Status: OPEN  
+└── Impact: Medium  
+└── Area: Chat Management UI (Bulk Export/Delete Modal)  
+└── Dependencies: Conversation list rendering system  
+└── Workaround: Manual deletion per conversation  
+└── Repro: Open GUI → Bulk Export/Delete  
+
+---
+
+### BUG NODE DETAILS
+
+#### BUG-001 — Bulk Export/Delete UI Missing Delete Action
+- **Status:** OPEN  
+- **Symptom:** Bulk Export/Delete panel only shows export functionality, delete action is missing  
+- **Suspected Cause:** UI modal likely only partially wired to delete handler logic  
+- **Workaround:** Manually delete conversations one by one in chat UI  
+- **Reproducible:** Yes  
+  Steps:
+  1. Open floating panel  
+  2. Navigate to Bulk Export/Delete  
+  3. Observe missing delete button  
+- **Failed Attempts:**
+  - Attempt001:
+    - Description: Reviewed code for delete handler binding  
+    - Outcome: Inconclusive  
+    - Notes: Likely UI-to-action mapping mismatch in modal component
