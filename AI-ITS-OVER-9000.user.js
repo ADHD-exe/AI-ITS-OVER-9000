@@ -1,4 +1,7 @@
 // ==UserScript==
+// IMPORTANT DEVELOPMENT RULE:
+// REVIEW SOURCE OF TRUTH PROJECT_LOGS.md BEFORE MAKING ANY CHANGES,
+// EDITS, REVISIONS, UPGRADES, OR FIXES OF ANY KIND.
 // @name         Unleashed Prompt
 // @namespace    https://github.com/unleashed-prompt
 // @version      1.0.3
