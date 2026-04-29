@@ -160,20 +160,21 @@ BUG-001 → Bulk Export/Delete UI Missing Delete Action
 
 ---
 
-### BUG NODE DETAILS
+## 2. Known Issues / Bugs (Graph View)
 
-#### BUG-001 — Bulk Export/Delete UI Missing Delete Action
-- **Status:** OPEN  
-- **Symptom:** Bulk Export/Delete panel only shows export functionality, delete action is missing  
-- **Suspected Cause:** UI modal likely only partially wired to delete handler logic  
-- **Workaround:** Manually delete conversations one by one in chat UI  
-- **Reproducible:** Yes  
-  Steps:
-  1. Open floating panel  
-  2. Navigate to Bulk Export/Delete  
-  3. Observe missing delete button  
-- **Failed Attempts:**
-  - Attempt001:
-    - Description: Reviewed code for delete handler binding  
-    - Outcome: Inconclusive  
-    - Notes: Likely UI-to-action mapping mismatch in modal component
+```mermaid
+flowchart TD
+
+BUG001[BUG-001: Bulk Export/Delete Missing Delete Action]
+
+BUG001 --> S1[Status: OPEN]
+BUG001 --> S2[Area: Chat Management UI]
+BUG001 --> S3[Impact: Medium]
+
+BUG001 --> R1[Repro: Open GUI → Bulk Export/Delete]
+BUG001 --> W1[Workaround: Manual deletion only]
+
+BUG001 --> C1[Cause: Likely UI not wired to delete handler]
+
+BUG001 --> A1[Attempt001: Reviewed code]
+A1 --> A2[Outcome: Inconclusive]
