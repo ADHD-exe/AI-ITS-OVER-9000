@@ -44,23 +44,24 @@ This file is the authoritative source for:
 
 ## 2. Known Issues / Bugs 
 Tempelate: 
-### | ID BUG-000 | STATUS:OPEN or CLOSED | 
-- **Symptom description:** What's broken/happening?
-- **Solution:** How'd you fix it? if applicable
-- **Suspected cause:** What's causing this bug/issue? if applicable
-- **Workaround:** How to work around the issue. if applicable
-- **Reproduceable:** How to reproduce the bug. if applicable.
-- **FailedAttempts:** Describe failed attempts to fix the issue. if applicable
-  - **Attempt#:** Attempt000:
-  - **Description:** I created this tempelate.
-  - **Outcome:**  SUCCESS
-  - **Note:**  if you aren' sure what to do, take notes and ask for help.
+|---|---|
+#### | ID BUG-000 | STATUS:OPEN or CLOSED | 
+| **Symptom description:** | What's broken/happening?|
+| **Solution:** | How'd you fix it? if applicable|
+| **Suspected cause:** | What's causing this bug/issue? if applicable|
+| **Workaround:** | How to work around the issue. if applicable |
+| **Reproduceable:** | How to reproduce the bug. if applicable. |
+| **FailedAttempts:** | Describe failed attempts to fix the issue. if applicable |
+  | - **Attempt#:** | Attempt000:| 
+  | - **Description:** | I created this tempelate.|
+  | - **Outcome:** | SUCCESS |
+  | - **Note:** | if you aren' sure what to do, take notes and ask for help. |
 
-### BUG-001: Open
-- **Symptom:** In GUI Bulk Export/Delete button opens up conversation list and has an export button but not a delete button.
-- **Workaround:** Delete conversations manually one at a time.
-- **Reproduceable:** Yes, Open the GUI and click Bulk Export/Delete
-- **Attempt001:** Reviewed code 
+#### | BUG-001 |  Open |
+| **Symptom:** | In GUI Bulk Export/Delete button opens up conversation list and has an export button but not a delete button. |
+| **Workaround:** | Delete conversations manually one at a time. |
+| **Reproduceable:** | Yes, Open the GUI and click Bulk Export/Delete |
+| **Attempt001:** | Reviewed code |
 
 ---
 
@@ -107,30 +108,40 @@ Brief description of what is being worked on.
 ```
 
 # LOGS:
+## 2026-04 - FEATURE ADDED — Panel nav button tooltips
 
-**Date:** April 2026
-**Files:** `AI-ITS-OVER-9000.user.js`, `PROJECT_LOGS.md`
+**Status:** Completed
 
+**Summary:**  
+Hovering any of the 7 nav buttons at the top of the floating panel now shows a styled tooltip describing that page's contents and key features.
 
-### FEATURE ADDED — Panel nav button tooltips
-- **What:** Hovering any of the 7 nav buttons at the top of the floating panel now shows a styled tooltip describing that page's contents and key features.
-- **Implementation:** `PAGE_TOOLTIPS` map added. `createCustomTooltip()` updated to use `requestAnimationFrame` for correct positioning of multi-line tooltips, smart above/below placement, and horizontal clamping. Tooltip CSS updated: wider (280px max), wrapped lines, themed styling matching the panel.
+**Files:**  
+- AI-ITS-OVER-9000.user.js  
+- PROJECT_LOGS.md  
 
-### Next Steps
-- Ask for next steps.
+**Done:**  
+- Added `PAGE_TOOLTIPS` map for navigation button descriptions  
+- Updated `createCustomTooltip()` for:
+  - requestAnimationFrame positioning
+  - multi-line tooltip support  
+  - smart above/below placement logic  
+  - horizontal clamping to viewport  
+- Updated tooltip CSS:
+  - increased max width to 280px  
+  - enabled text wrapping  
+  - themed styling aligned with panel UI  
 
-- `initGistIntegration()` — was a log stub in v1.0.0/v1.0.1; **fixed in v1.0.2** to properly wire Gist on gist.github.com pages
+**Next:**  
+- Define next feature iteration or enhancements  
 
-### What is Broken or Unverified
+**Issues:**  
+- Bulk export cross-navigation (Phase 2) may be blocked by CSP depending on environment  
+- File attachment on Claude.ai may fail depending on ClipboardEvent support in different builds  
+- `attachSmartEditorLogic` bracket skipping only works in textarea, not contenteditable elements  
 
-- Bulk export cross-navigation (noted as Phase 2 in code — uses iframe approach that may be CSP-blocked on some configurations)
-- File attach on Claude.ai — ClipboardEvent strategy may not work on all Claude builds
-- `attachSmartEditorLogic` bracket skip — closing char skip only works for textarea, not contenteditable
-
-### Recently Modified Files
-
-- `AI-ITS-OVER-9000.user.js` → bumped to v1.0.2, fixed `initGistIntegration()`
-- `PROJECT_LOGS.md` → created (this file)
-
+**Notes:**  
+- `initGistIntegration()` was previously a log stub in v1.0.0/v1.0.1  
+- Fixed and fully wired in v1.0.2 for gist.github.com pages  
+- `AI-ITS-OVER-9000.user.js` version updated to 1.0.2  
 
 ---
