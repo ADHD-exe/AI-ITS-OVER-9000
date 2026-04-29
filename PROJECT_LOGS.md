@@ -243,3 +243,49 @@ This file is the authoritative source for:
 | Date/Time | LOG-ID | Task / Phase | Status | File | Links (BUG / UP) |
 |----------|--------|--------------|--------|------|------------------|
 | 2026-04-22 16:07 | LOG-001 | Review fixes and repo sync | Completed | logs/LOG-001.md | BUG-001 |
+
+### 2026-04-22 — UI Simplification Addendum
+
+- Removed the standalone `Export Current Chat` panel button because the current chat can already be exported through `Bulk Export Chats`.
+- Removed the matching GM menu command so the visible export UI now has a single primary path.
+- Kept the internal `exportCurrentChatAsMarkdown()` function and shortcut behavior unchanged for now to avoid a larger behavior change than requested.
+
+### 2026-04-22 — State Update (v1.0.5)
+
+- The shipped userscript version is now **v1.0.5**.
+- The export fallback note now references `Bulk Export Chats` instead of the removed single-chat export UI.
+- The `Export Chat` shortcut now opens the bulk export modal.
+- All remaining `document.execCommand(...)` usage has been replaced with `Selection` / `Range`-based editing helpers.
+- Panel nav tooltips now use stronger event binding and native `title` fallbacks.
+- Bubble styling now targets the outer message content container instead of an inner text node wrapper, reducing duplicate grey backing.
+- The floating panel now keeps a fixed shell height and scrollable content area for taller pages like `Layout` and `Font`.
+- The extra minimized `UP` launcher strip has been removed; the minimized panel header now reopens the GUI directly.
+- Warning hiding now marks known warning copy directly instead of relying on a brittle CSS-only selector.
+- Font override now applies across the sidebar, panel, composer, and message content.
+- Sidebar delete buttons now use absolute positioning and right padding so chat titles stay on one line.
+
+### 2026-04-22 — Completed Changes Addendum
+
+- **File:** `AI-ITS-OVER-9000.user.js`
+  **Areas:** export fallback copy, export shortcut behavior, contenteditable editing helpers, tooltip binding, panel shell/layout, minimized header behavior, warning hiding, font override, bubble targeting, sidebar delete layout
+  **What changed:** Repointed export messaging and shortcut behavior to the bulk export flow, replaced deprecated editing APIs, improved tooltip and panel behavior, and fixed the reported UI rendering issues around bubbles, warnings, fonts, and sidebar delete controls.
+  **Why:** These were direct user-reported bugs and cleanup requests after the earlier review pass.
+  **How verified:** `node --check AI-ITS-OVER-9000.user.js`
+
+- **File:** `logs/LOG-002.md`
+  **Areas:** project audit trail
+  **What changed:** Added a dedicated log entry for the UI bug-fix and editor-modernization pass.
+  **Why:** Required by the repository logging rules.
+  **How verified:** Manual file review after creation.
+
+### 2026-04-22 — Next Steps Addendum
+
+- Smoke-test bubble styling on the current ChatGPT DOM to confirm there is no remaining double-background wrapper.
+- Verify warning-hiding copy on both ChatGPT and Claude in case platform wording changes.
+- Remove `exportCurrentChatAsMarkdown()` entirely if the bulk export flow fully replaces it.
+
+### 2026-04-22 — Logs Table Addendum 2
+
+| Date/Time | LOG-ID | Task / Phase | Status | File | Links (BUG / UP) |
+|----------|--------|--------------|--------|------|------------------|
+| 2026-04-22 17:15 | LOG-002 | UI bug fixes and editor modernization | Completed | logs/LOG-002.md | BUG-001 |

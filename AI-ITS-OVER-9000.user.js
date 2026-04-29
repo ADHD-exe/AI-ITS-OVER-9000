@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Unleashed Prompt
 // @namespace    https://github.com/unleashed-prompt
-// @version      1.0.4
+// @version      1.0.5
 // @description  ChatGPT-first hybrid: full visual theming, advanced prompt library, AI enhance with diff, bulk chat management, placeholder system, inline suggest, nav widget, gist integration, and more.
 // @author       Unleashed Prompt Contributors
 // @downloadURL  https://raw.githubusercontent.com/ADHD-exe/AI-ITS-OVER-9000/main/AI-ITS-OVER-9000.user.js
@@ -31,12 +31,24 @@
 
 /**
  * ============================================================
- *  UNLEASHED PROMPT v1.0.4
+ *  UNLEASHED PROMPT v1.0.5
  *  Hybrid of GPT-Unleashed v2.8.26 (Script A) + My Prompt v6.0.8 (Script B)
  *  Architecture: Single structured IIFE
  *  Platform: ChatGPT-first, Claude.ai secondary
  *  Storage: GM_getValue / GM_setValue + IndexedDB for pins
  * ============================================================
+ *
+ *  CHANGELOG v1.0.5:
+ *   - FIX: Export fallback wording now points users back to Bulk Export Chats
+ *   - FIX: Export Chat shortcut now opens the bulk export modal
+ *   - FIX: Replaced remaining deprecated execCommand editor paths with Selection/Range editing
+ *   - FIX: Panel nav tooltips now bind more reliably and also expose native title fallbacks
+ *   - FIX: Promoted bubble styling to the outer message content container to avoid duplicate grey backing
+ *   - FIX: Panel body now scrolls within a fixed-height shell for taller pages like Layout and Font
+ *   - FIX: Removed the extra minimized UP launcher and made the panel header reopen the GUI
+ *   - FIX: Warning hiding now marks known warning copy directly instead of relying on a brittle selector
+ *   - FIX: Font override now applies to message content, sidebar, composer, and panel controls
+ *   - FIX: Sidebar delete button now uses absolute positioning to avoid wrapping chat titles
  *
  *  CHANGELOG v1.0.4:
  *   - FIX: Update checker/download URL now points at this repository's shipped userscript
@@ -88,7 +100,7 @@
   // §2 · CONSTANTS & STORAGE KEYS
   // ============================================================
   const SCRIPT_NAME    = 'Unleashed Prompt';
-  const SCRIPT_VERSION = '1.0.4';
+  const SCRIPT_VERSION = '1.0.5';
   const UPDATE_URL     = 'https://raw.githubusercontent.com/ADHD-exe/AI-ITS-OVER-9000/main/AI-ITS-OVER-9000.user.js';
 
   const KEYS = {
@@ -239,6 +251,76 @@
       && r.top < window.innerHeight && r.left < window.innerWidth;
   }
 
+  function dispatchEditableInput(target, inputType = 'insertText', data = null) {
+    if (!target) return;
+    try {
+      target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType, data }));
+    } catch {
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function getSelectionInside(root) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const node = range.commonAncestorContainer;
+    if (node === root || root.contains(node)) return { sel, range };
+    return null;
+  }
+
+  function replaceContentEditableText(root, text) {
+    if (!root) return;
+    root.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.deleteContents();
+    const caretRange = document.createRange();
+    if (text) {
+      const node = document.createTextNode(text);
+      range.insertNode(node);
+      caretRange.setStart(node, text.length);
+      caretRange.collapse(true);
+    } else {
+      caretRange.selectNodeContents(root);
+      caretRange.collapse(true);
+    }
+    sel.removeAllRanges();
+    sel.addRange(caretRange);
+    dispatchEditableInput(root, text ? 'insertText' : 'deleteContentBackward', text || null);
+  }
+
+  function insertTextIntoContentEditable(root, text, options = {}) {
+    if (!root) return null;
+    root.focus();
+    const current = getSelectionInside(root);
+    const sel = current?.sel || window.getSelection();
+    const range = current?.range?.cloneRange() || document.createRange();
+    if (!current) {
+      range.selectNodeContents(root);
+      range.collapse(false);
+    }
+    range.deleteContents();
+    const node = document.createTextNode(text);
+    range.insertNode(node);
+
+    const nextRange = document.createRange();
+    if (typeof options.selectStart === 'number') {
+      const selectEnd = typeof options.selectEnd === 'number' ? options.selectEnd : options.selectStart;
+      nextRange.setStart(node, options.selectStart);
+      nextRange.setEnd(node, selectEnd);
+    } else {
+      nextRange.setStart(node, text.length);
+      nextRange.collapse(true);
+    }
+
+    sel.removeAllRanges();
+    sel.addRange(nextRange);
+    dispatchEditableInput(root, 'insertText', text);
+    return node;
+  }
+
   const Store = (() => {
     const _cache = new Map();
     async function get(key, defaultVal = null) {
@@ -320,8 +402,7 @@
         } catch {}
         try {
           if (composer.isContentEditable) {
-            document.execCommand('selectAll', false, null);
-            document.execCommand('insertText', false, text);
+            replaceContentEditableText(composer, text);
             return;
           }
         } catch {}
@@ -342,10 +423,8 @@
       platformInsert(composer, text) {
         if (!composer) return;
         composer.focus();
-        try {
-          document.execCommand('selectAll', false, null);
-          document.execCommand('insertText', false, text);
-        } catch { composer.textContent = text; }
+        try { replaceContentEditableText(composer, text); }
+        catch { composer.textContent = text; }
       },
     },
     gist: {
@@ -446,27 +525,30 @@
     tag.textContent = `
 /* === Unleashed Prompt — Structural CSS v1.0.2 === */
 body.up-theme-active{background-color:var(--up-page-bg)!important;color:var(--up-page-text)!important}
-body.up-bubble-active [data-message-author-role="user"] .up-bubble{background-color:var(--up-user-bubble-bg)!important;color:var(--up-user-bubble-text)!important;border-radius:var(--up-user-radius)!important;max-width:var(--up-user-maxw)!important;padding:var(--up-user-pad-v) var(--up-user-pad-h)!important;font-size:var(--up-user-font-size)!important;text-align:var(--up-text-align)!important}
-body.up-bubble-active [data-message-author-role="assistant"] .up-bubble{background-color:var(--up-assist-bubble-bg)!important;color:var(--up-assist-bubble-text)!important;border-radius:var(--up-assist-radius)!important;max-width:var(--up-assist-maxw)!important;padding:var(--up-assist-pad-v) var(--up-assist-pad-h)!important;font-size:var(--up-assist-font-size)!important;text-align:var(--up-text-align)!important}
+body.up-bubble-active [data-message-author-role="user"] .up-bubble{display:block;box-sizing:border-box;background-color:var(--up-user-bubble-bg)!important;color:var(--up-user-bubble-text)!important;border-radius:var(--up-user-radius)!important;max-width:var(--up-user-maxw)!important;padding:var(--up-user-pad-v) var(--up-user-pad-h)!important;font-size:var(--up-user-font-size)!important;text-align:var(--up-text-align)!important;margin-left:auto;box-shadow:none!important;border:none!important}
+body.up-bubble-active [data-message-author-role="assistant"] .up-bubble{display:block;box-sizing:border-box;background-color:var(--up-assist-bubble-bg)!important;color:var(--up-assist-bubble-text)!important;border-radius:var(--up-assist-radius)!important;max-width:var(--up-assist-maxw)!important;padding:var(--up-assist-pad-v) var(--up-assist-pad-h)!important;font-size:var(--up-assist-font-size)!important;text-align:var(--up-text-align)!important;margin-right:auto;box-shadow:none!important;border:none!important}
+body.up-bubble-active [data-message-author-role] .up-bubble > *:first-child{margin-top:0!important}
+body.up-bubble-active [data-message-author-role] .up-bubble > *:last-child{margin-bottom:0!important}
 body.up-embed-active pre,body.up-embed-active code{background-color:var(--up-embed-bg)!important;color:var(--up-embed-text)!important;text-align:left!important}
 body.up-composer-active #prompt-textarea,body.up-composer-active [data-testid="chat-input"]{background-color:var(--up-composer-bg)!important;color:var(--up-composer-text)!important}
 body.up-sidebar-active nav{background-color:var(--up-sidebar-bg)!important;color:var(--up-sidebar-text)!important}
-body.up-hide-warning .text-token-text-secondary:has(svg[aria-hidden]){display:none!important}
-body.up-font-active{font-family:var(--up-font-family)!important}
+body.up-hide-warning .up-generated-warning{display:none!important}
+body.up-font-active,body.up-font-active button,body.up-font-active input,body.up-font-active textarea,body.up-font-active select,body.up-font-active [contenteditable="true"],body.up-font-active nav,body.up-font-active nav *,body.up-font-active [data-message-author-role],body.up-font-active [data-message-author-role] *,body.up-font-active .ProseMirror{font-family:var(--up-font-family)!important}
 body.up-sidebar-active nav a:hover,body.up-sidebar-active nav li:hover{background-color:var(--up-sidebar-hover)!important;color:var(--up-sidebar-hover-text)!important}
 body.up-sidebar-active nav a,body.up-sidebar-active nav li{color:var(--up-sidebar-text)!important;font-size:var(--up-sidebar-font-size)!important}
 body.up-composer-active form,body.up-composer-active .composer-parent,body.up-composer-active [data-testid="composer-background"]{background-color:var(--up-composer-bg)!important}
 body.up-composer-active #prompt-textarea,body.up-composer-active [data-testid="chat-input"],body.up-composer-active .ProseMirror{background-color:transparent!important;color:var(--up-composer-text)!important;caret-color:var(--up-composer-text)!important}
 body.up-embed-active pre{text-align:left!important}
 body.up-embed-active .hljs{background-color:var(--up-embed-bg)!important}
-#${PANEL_ID}{position:fixed;z-index:2147483640;background:var(--up-panel-bg);color:var(--up-panel-text);border:1px solid var(--up-panel-border);border-radius:12px;opacity:var(--up-panel-opacity);width:322px;min-height:60px;box-shadow:0 8px 32px rgba(0,0,0,.5);user-select:none;transition:opacity .15s}
+#${PANEL_ID}{position:fixed;z-index:2147483640;background:var(--up-panel-bg);color:var(--up-panel-text);border:1px solid var(--up-panel-border);border-radius:12px;opacity:var(--up-panel-opacity);width:338px;min-height:60px;max-height:min(82vh,760px);box-shadow:0 8px 32px rgba(0,0,0,.5);user-select:none;transition:opacity .15s;display:flex;flex-direction:column}
 #${PANEL_ID}.up-panel-hidden .up-panel-body{display:none}
-#${PANEL_ID} .up-panel-header{cursor:move;padding:8px 12px;border-bottom:1px solid var(--up-panel-border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px}
-#${PANEL_ID} .up-panel-body{padding:12px}
+#${PANEL_ID}.up-panel-hidden .up-panel-header{cursor:pointer}
+#${PANEL_ID} .up-panel-header{cursor:move;padding:8px 12px;border-bottom:1px solid var(--up-panel-border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;flex-shrink:0}
+#${PANEL_ID} .up-panel-body{padding:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#${PANEL_ID} #up-panel-content{overflow-y:auto;min-height:0;padding-right:4px}
 #${PANEL_ID} .up-panel-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
 #${PANEL_ID} .up-panel-nav-btn{padding:3px 8px;border-radius:6px;border:1px solid var(--up-panel-border);background:transparent;color:var(--up-panel-text);cursor:pointer;font-size:11px}
 #${PANEL_ID} .up-panel-nav-btn.active{background:var(--up-panel-accent);color:#fff;border-color:var(--up-panel-accent)}
-#${PANEL_ID} .up-launcher{cursor:pointer;padding:6px 10px;font-size:16px;border-bottom:1px solid var(--up-panel-border)}
 .up-pill-wrapper{display:inline-flex;align-items:center;gap:2px;margin:0 4px}
 .up-pill-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;border:1px solid var(--up-panel-border,#444);background:var(--up-panel-bg,#1e1e2e);color:var(--up-panel-text,#cdd6f4);cursor:pointer;font-size:12px;font-weight:500}
 .up-pill-btn:hover{filter:brightness(1.15)}
@@ -490,7 +572,7 @@ body.up-embed-active .hljs{background-color:var(--up-embed-bg)!important}
 #up-inline-menu.up-visible{display:block}
 .up-inline-item{padding:7px 12px;cursor:pointer;font-size:12px}
 .up-inline-item.up-active,.up-inline-item:hover{background:var(--up-panel-accent,#89b4fa);color:#fff}
-.up-sidebar-del-btn{opacity:0;transition:opacity .15s;cursor:pointer;background:transparent;border:none;color:#f38ba8;font-size:14px;padding:2px 4px;border-radius:4px}
+.up-sidebar-del-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s;cursor:pointer;background:transparent;border:none;color:#f38ba8;font-size:14px;padding:2px 4px;border-radius:4px;line-height:1;z-index:1}
 li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 .up-sidebar-del-btn:hover{background:rgba(243,139,168,.15)}
 .up-diff-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
@@ -501,9 +583,7 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 .up-tooltip.up-visible{opacity:.9}
 #${PANEL_ID} *::-webkit-scrollbar,#up-prompt-menu::-webkit-scrollbar,.up-modal-box::-webkit-scrollbar,#up-msg-index-popup::-webkit-scrollbar{width:4px}
 #${PANEL_ID} *::-webkit-scrollbar-thumb,#up-prompt-menu::-webkit-scrollbar-thumb,.up-modal-box::-webkit-scrollbar-thumb{background:var(--up-panel-border,#313244);border-radius:2px}
-#${PANEL_ID}.up-launcher-ghost .up-launcher{opacity:.08;transition:opacity .2s}
-#${PANEL_ID}.up-launcher-ghost:hover .up-launcher{opacity:1}
-@media (hover:none),(pointer:coarse){#${PANEL_ID}.up-launcher-ghost .up-launcher{opacity:.6!important}.up-scroll-btn{right:8px}}
+@media (hover:none),(pointer:coarse){.up-scroll-btn{right:8px}}
 .up-scroll-btn{position:fixed;right:18px;z-index:2147483630;width:32px;height:32px;border-radius:50%;border:1px solid var(--up-panel-border,#444);background:var(--up-panel-bg,#1e1e2e);color:var(--up-panel-text,#cdd6f4);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;opacity:.7;transition:opacity .15s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .up-scroll-btn:hover{opacity:1}
 .up-scroll-btn.up-scroll-top{bottom:88px}
@@ -733,9 +813,7 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     if (!composer) return;
     try {
       if (composer.isContentEditable) {
-        composer.focus();
-        document.execCommand('selectAll', false, null);
-        document.execCommand('delete', false, null);
+        replaceContentEditableText(composer, '');
         return;
       }
     } catch {}
@@ -1207,15 +1285,12 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
         const closing = BRACKET_PAIRS[e.key];
         e.preventDefault();
         if (composer.isContentEditable) {
-          document.execCommand('insertText', false, e.key + closing);
-          const sel = window.getSelection();
-          if (sel && sel.rangeCount) {
-            const r = sel.getRangeAt(0);
-            r.setStart(r.startContainer, Math.max(0, r.startOffset - 1));
-            r.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(r);
-          }
+          const selection = getSelectionInside(composer);
+          const selectedText = selection?.range?.toString() || '';
+          insertTextIntoContentEditable(composer, e.key + selectedText + closing, {
+            selectStart: e.key.length,
+            selectEnd: e.key.length + selectedText.length,
+          });
         } else {
           const start = composer.selectionStart, end = composer.selectionEnd, val = composer.value;
           const selected = val.slice(start, end);
@@ -1293,12 +1368,12 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 
   function wrapWithMacro(composer) {
     if (composer.isContentEditable) {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount && !sel.isCollapsed) {
-        document.execCommand('insertText', false, `##start\n${sel.toString()}\n##end`);
-      } else {
-        document.execCommand('insertText', false, '##start\n\n##end');
-      }
+      const selection = getSelectionInside(composer);
+      const selectedText = selection?.range && !selection.sel.isCollapsed ? selection.range.toString() : '';
+      insertTextIntoContentEditable(composer, `##start\n${selectedText}\n##end`, {
+        selectStart: 8,
+        selectEnd: 8 + selectedText.length,
+      });
       return;
     }
     const start = composer.selectionStart, end = composer.selectionEnd, val = composer.value;
@@ -1358,7 +1433,7 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
         // Server-side render may not include messages (SPA shell only).
         // Return a stub so bulk export can still note the chat title.
         const title = doc.title || href;
-        return { href, md: `# ${escapeHtml(title)}\n_Note: Message content not available in server HTML. Open the chat and use "Export Current Chat" instead._\n`, error: null };
+        return { href, md: `# ${escapeHtml(title)}\n_Note: Message content not available in server HTML. Open the live chat and include it in "Bulk Export Chats" instead._\n`, error: null };
       }
 
       const title = doc.title || 'Chat Export';
@@ -1495,7 +1570,11 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
         try { await deleteChatFromSidebarItem(item.href); showNotification('Chat deleted.'); }
         catch { showNotification('Delete failed. Try manually.', 'error'); }
       };
-      parent.style.position = 'relative'; parent.appendChild(btn);
+      parent.style.position = 'relative';
+      parent.style.overflow = 'visible';
+      item.el.style.display = 'block';
+      item.el.style.paddingRight = '28px';
+      parent.appendChild(btn);
     });
   }
 
@@ -2116,25 +2195,32 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 
   let _tooltipEl = null;
   function createCustomTooltip(anchor, text) {
+    if (!anchor || anchor.__upTooltipBound) return;
+    anchor.__upTooltipBound = true;
     if (!_tooltipEl) { _tooltipEl = el('div', { cls: 'up-tooltip' }); document.body.appendChild(_tooltipEl); }
-    anchor.addEventListener('mouseenter', () => {
+
+    const positionTooltip = () => {
+      const r  = anchor.getBoundingClientRect();
+      const tw = _tooltipEl.offsetWidth;
+      const th = _tooltipEl.offsetHeight;
+      let top = r.top - th - 6;
+      if (top < 4) top = r.bottom + 6;
+      let left = r.left + r.width / 2 - tw / 2;
+      left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+      _tooltipEl.style.left = `${left}px`;
+      _tooltipEl.style.top  = `${top}px`;
+    };
+
+    const showTooltip = () => {
       _tooltipEl.textContent = text;
       _tooltipEl.classList.add('up-visible');
-      // Position after making visible so we know the rendered dimensions
-      requestAnimationFrame(() => {
-        const r  = anchor.getBoundingClientRect();
-        const tw = _tooltipEl.offsetWidth;
-        const th = _tooltipEl.offsetHeight;
-        // Prefer above, fall back to below if not enough room
-        let top = r.top - th - 6;
-        if (top < 4) top = r.bottom + 6;
-        // Clamp horizontally
-        let left = r.left + r.width / 2 - tw / 2;
-        left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
-        _tooltipEl.style.left = `${left}px`;
-        _tooltipEl.style.top  = `${top}px`;
-      });
-    });
+      requestAnimationFrame(positionTooltip);
+    };
+
+    anchor.addEventListener('mouseenter', showTooltip);
+    anchor.addEventListener('mousemove', positionTooltip);
+    anchor.addEventListener('focus', showTooltip);
+    anchor.addEventListener('blur', () => _tooltipEl.classList.remove('up-visible'));
     anchor.addEventListener('mouseleave', () => _tooltipEl.classList.remove('up-visible'));
   }
 
@@ -2167,25 +2253,25 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     if (_panel) return _panel;
     _panel = el('div', { id: PANEL_ID, cls: 'up-panel-hidden' });
     _panel.setAttribute('aria-label', 'Unleashed Prompt Settings Panel');
-    const launcher = el('div', { cls: 'up-launcher', text: '⚡ UP', attrs: { title: 'Unleashed Prompt' } });
-    launcher.onclick = () => togglePanel();
     const header = el('div', { cls: 'up-panel-header' });
+    header.onclick = (e) => {
+      if (UIState.panelHidden && !e.target.closest('button')) togglePanel(true);
+    };
     header.appendChild(el('span', { text: '⚡ Unleashed Prompt' }));
     const closeBtn = el('button', { text: '−', attrs: { style: 'background:transparent;border:none;color:inherit;cursor:pointer;font-size:16px;padding:0 4px' } });
     closeBtn.onclick = () => togglePanel(false);
     header.appendChild(closeBtn);
     const nav = el('div', { cls: 'up-panel-nav' });
     PANEL_PAGES.forEach(page => {
-      const btn = el('button', { cls: 'up-panel-nav-btn', text: pageName(page), attrs: { 'data-page': page } });
+      const btn = el('button', { cls: 'up-panel-nav-btn', text: pageName(page), attrs: { 'data-page': page, title: PAGE_TOOLTIPS[page] || page } });
       btn.onclick = () => switchPanelPage(page);
-      // Rich tooltip on hover
       createCustomTooltip(btn, PAGE_TOOLTIPS[page] || page);
       nav.appendChild(btn);
     });
     const body = el('div', { cls: 'up-panel-body' });
     const contentArea = el('div', { id: 'up-panel-content' });
     body.appendChild(nav); body.appendChild(contentArea);
-    _panel.appendChild(launcher); _panel.appendChild(header); _panel.appendChild(body);
+    _panel.appendChild(header); _panel.appendChild(body);
     makeDraggable(_panel, header, true);
     const s = ThemeState.settings;
     _panel.style.left = `${s.panelLeft}px`; _panel.style.top = `${s.panelTop}px`;
@@ -2231,7 +2317,6 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     c.innerHTML = '';
     c.appendChild(el('div', { text: `⚡ ${SCRIPT_NAME} v${SCRIPT_VERSION}`, attrs: { style: 'font-weight:700;margin-bottom:10px' } }));
     [
-      { text: '📥 Export Current Chat',   fn: exportCurrentChatAsMarkdown },
       { text: '📥 Bulk Export Chats',     fn: () => openBulkChatModal('export') },
       { text: '🗑 Bulk Delete Chats',     fn: () => openBulkChatModal('delete') },
       { text: '💾 Backup & Restore…',     fn: openBackupModal },
@@ -2446,7 +2531,7 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
 
     // Keyboard shortcuts
     c.appendChild(el('div', { cls: 'up-section-label', text: 'Keyboard Shortcuts' }));
-    const shortcutNames = { openPromptMenu: 'Open Prompt Menu', openSettings: 'Open Settings', aiEnhance: 'AI Enhance', quickEnhance: 'Quick Enhance', exportChat: 'Export Chat', scrollTop: 'Scroll to Top', scrollBottom: 'Scroll to Bottom', newChat: 'New Chat' };
+    const shortcutNames = { openPromptMenu: 'Open Prompt Menu', openSettings: 'Open Settings', aiEnhance: 'AI Enhance', quickEnhance: 'Quick Enhance', exportChat: 'Bulk Export Chats', scrollTop: 'Scroll to Top', scrollBottom: 'Scroll to Bottom', newChat: 'New Chat' };
     Object.entries(shortcutNames).forEach(([action, label]) => {
       const sc = AIState.currentShortcuts[action] || DEFAULT_SHORTCUTS[action];
       const row = el('div', { cls: 'up-shortcut-row' });
@@ -2895,15 +2980,68 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     try {
       applyThemeVars();
       refreshMessageStyling();
+      refreshWarningVisibility();
       ensureSidebarDeleteButtons();
       checkComposerPresence();
     } finally { resumeObserver(); }
   }
 
+  function findBestMessageContent(msg) {
+    const candidates = [...msg.querySelectorAll('.whitespace-pre-wrap, .prose, .markdown, [class*="message-content"], [class*="markdown"]')]
+      .filter(el => el instanceof Element && (el.innerText || el.textContent || '').trim().length > 0);
+    if (!candidates.length) return null;
+
+    let best = candidates[0];
+    let bestScore = -Infinity;
+    for (const candidate of candidates) {
+      let score = Math.min(((candidate.innerText || candidate.textContent || '').trim().length), 400);
+      if (candidate.classList.contains('markdown')) score += 120;
+      if (candidate.classList.contains('prose')) score += 100;
+      if (candidate.classList.contains('whitespace-pre-wrap')) score += 60;
+      if (isElementVisible(candidate)) score += 40;
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    }
+
+    let bubble = best;
+    while (bubble.parentElement && bubble.parentElement !== msg) {
+      const parent = bubble.parentElement;
+      const parentText = (parent.innerText || parent.textContent || '').trim();
+      const bubbleText = (bubble.innerText || bubble.textContent || '').trim();
+      if (parent.children.length !== 1) break;
+      if (parent.querySelector('button, input, textarea, select')) break;
+      if (!parentText || parentText !== bubbleText) break;
+      bubble = parent;
+    }
+
+    return bubble;
+  }
+
   function refreshMessageStyling() {
     document.querySelectorAll('[data-message-author-role]').forEach(msg => {
-      const content = msg.querySelector('.whitespace-pre-wrap, .prose, .markdown, [class*="message-content"]');
-      if (content && !content.classList.contains('up-bubble')) content.classList.add('up-bubble');
+      msg.querySelectorAll('.up-bubble').forEach(el => el.classList.remove('up-bubble'));
+      const content = findBestMessageContent(msg);
+      if (content) content.classList.add('up-bubble');
+    });
+  }
+
+  function refreshWarningVisibility() {
+    document.querySelectorAll('.up-generated-warning').forEach(el => el.classList.remove('up-generated-warning'));
+    if (!ThemeState.settings.featureHideWarning) return;
+    const warningPatterns = [
+      /chatgpt can make mistakes/i,
+      /claude can make mistakes/i,
+      /don't share sensitive info/i,
+      /check important info/i,
+      /review outputs carefully/i,
+    ];
+
+    document.querySelectorAll('div, span, p').forEach(node => {
+      const text = (node.textContent || '').trim();
+      if (text.length < 20 || text.length > 220) return;
+      if (warningPatterns.some(pattern => pattern.test(text))) node.classList.add('up-generated-warning');
     });
   }
 
@@ -2944,7 +3082,6 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
     GM_registerMenuCommand(`⚡ ${SCRIPT_NAME} — Toggle Panel`, () => togglePanel());
     GM_registerMenuCommand('📚 Open Prompt Library', () => { if (UIState.pillButton) { const btn = UIState.pillButton.querySelector('.up-prompts-btn'); if (btn) togglePromptMenu(btn); } });
     GM_registerMenuCommand('🎨 Open Settings / Themes', () => togglePanel(true));
-    GM_registerMenuCommand('📥 Export Current Chat', exportCurrentChatAsMarkdown);
     GM_registerMenuCommand('📥 Bulk Export Chats', () => openBulkChatModal('export'));
     GM_registerMenuCommand('🗑 Bulk Delete Chats', () => openBulkChatModal('delete'));
     GM_registerMenuCommand('🔄 Check for Updates', () => checkForUserscriptUpdate(false));
@@ -2982,7 +3119,7 @@ li:hover .up-sidebar-del-btn,a:hover .up-sidebar-del-btn{opacity:1}
       const sc = AIState.currentShortcuts;
       if (isShortcutPressed(e, sc.openPromptMenu)) { e.preventDefault(); if (UIState.pillButton) { const btn = UIState.pillButton.querySelector('.up-prompts-btn'); if (btn) togglePromptMenu(btn); } }
       if (isShortcutPressed(e, sc.openSettings))  { e.preventDefault(); togglePanel(true); }
-      if (isShortcutPressed(e, sc.exportChat))     { e.preventDefault(); exportCurrentChatAsMarkdown(); }
+      if (isShortcutPressed(e, sc.exportChat))     { e.preventDefault(); openBulkChatModal('export'); }
       if (isShortcutPressed(e, sc.scrollTop))      { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
       if (isShortcutPressed(e, sc.scrollBottom))   { e.preventDefault(); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
       if (isShortcutPressed(e, sc.aiEnhance)) {
